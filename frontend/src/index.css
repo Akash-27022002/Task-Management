@@ -1,0 +1,39 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+.task-item-bg {
+  @apply flex items-center gap-3 p-2 rounded-lg hover:bg-white/[0.04] ring-1 ring-transparent hover:ring-white/10 transition;
+}
+
+.task-chip-common {
+  @apply text-[10px] px-1.5 py-0.5 rounded ring-1;
+}
+
+.task-chip-task {
+  @apply bg-emerald-500/20 text-emerald-300 ring-emerald-400/20;
+}
+
+.task-chip-coding {
+  @apply bg-indigo-500/20 text-indigo-300 ring-indigo-400/20;
+}
+
+.task-chip-reminder {
+  @apply bg-amber-500/20 text-amber-300 ring-amber-400/20;
+}
+
+.rev-button {
+  @apply px-2 py-1 text-xs rounded-md bg-indigo-500/90 hover:bg-indigo-500 text-white ring-1 ring-indigo-400/30;
+}
+
+.nav-link {
+  @apply w-full flex items-center gap-3 px-3 py-2 rounded-md transition;
+}
+
+.nav-link.active {
+  @apply bg-white/[0.06] ring-1 ring-white/10 text-slate-200;
+}
+
+.nav-link:not(.active) {
+  @apply text-slate-300 hover:bg-white/[0.06] hover:ring-1 hover:ring-white/10;
+}
