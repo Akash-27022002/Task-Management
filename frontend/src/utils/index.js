@@ -105,7 +105,7 @@ export function nextWeekKeyFromDateStr(dateStr) {
   return `${info.year}-W${w}`;
 }
 
-export const dayKeys = ['mon', 'tue', 'wed', 'thu', 'fri'];
+export const dayKeys = ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'];
 
 /**
  * Gets the day key for a date string.
@@ -115,7 +115,7 @@ export const dayKeys = ['mon', 'tue', 'wed', 'thu', 'fri'];
 export function dayKeyFromDateStr(dateStr) {
   const d = parseDate(dateStr);
   const jsDay = d.getDay();
-  const map = { 1: 'mon', 2: 'tue', 3: 'wed', 4: 'thu', 5: 'fri' };
+  const map = { 0: 'mon', 1: 'tue', 2: 'wed', 3: 'thu', 4: 'fri', 5: 'sat', 6: 'sun' };
   return map[jsDay] || null;
 }
 
@@ -185,4 +185,40 @@ export function getNextRevisionDate(task) {
   const base = parseDate(task.createdAt || task.date);
   const offsets = [7, 30, 90];
   return addDays(base, offsets[task.revisionStage]);
+}
+
+/**
+ * Gets the Monday date of an ISO week.
+ * @param {number} week - ISO week number.
+ * @param {number} year - The year.
+ * @returns {Date} The Date object for Monday of that week.
+ */
+export function firstDateOfISOWeek(week, year) {
+  const simple = new Date(year, 0, 1 + (week - 1) * 7);
+  const dow = simple.getDay();
+  const ISOweekStart = new Date(simple);
+  if (dow <= 4) {
+    ISOweekStart.setDate(simple.getDate() - simple.getDay() + 1);
+  } else {
+    ISOweekStart.setDate(simple.getDate() + 8 - simple.getDay());
+  }
+  return ISOweekStart;
+}
+
+/**
+ * Converts a week key (YYYY-Wxx) and a day key (mon–fri) into a date string (YYYY-MM-DD).
+ * @param {string} weekKey - Week key like "2025-W35".
+ * @param {string} dayKey - Day key ("mon", "tue", ..., "fri").
+ * @returns {string} ISO date string for that day.
+ */
+export function dateStrFromWeekAndDay(weekKey, dayKey) {
+  const [year, weekStr] = weekKey.split("-W");
+  const week = parseInt(weekStr, 10);
+  const firstDay = firstDateOfISOWeek(week, parseInt(year, 10)); // Monday
+  const days = ["mon", "tue", "wed", "thu", "fri", "sat", "sun"];
+  const dayIndex = days.indexOf(dayKey);
+  console.log("day index",dayIndex);
+  
+  if (dayIndex === -1) throw new Error(`Invalid dayKey: ${dayKey}`);
+  return toISODate(addDays(firstDay, dayIndex));
 }
