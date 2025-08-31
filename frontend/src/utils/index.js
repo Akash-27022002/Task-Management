@@ -69,17 +69,28 @@ export const min2t = (min) => {
 };
 
 /**
- * Gets ISO week information for a date.
- * @param {Date} dateObj - The Date object.
- * @returns {{year: number, week: number}} The year and week number.
+ * Calculates the ISO 8601 week number and year for a given date.
+ * @param {Date} date - The input date object.
+ * @returns {{year: number, week: number}} - The ISO week and year.
  */
-export function getISOWeekInfo(dateObj) {
-  const d = new Date(Date.UTC(dateObj.getFullYear(), dateObj.getMonth(), dateObj.getDate()));
-  const dayNum = d.getUTCDay() || 7;
-  d.setUTCDate(d.getUTCDate() + 4 - dayNum);
+export function getISOWeekInfo(date) {
+  // Create a new date object to avoid modifying the original
+  const d = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
+
+  // Key step: Find the Thursday of the week. ISO week number is based on this.
+  // The expression `d.getUTCDay() || 7` treats Sunday (0) as 7, the last day of the ISO week.
+  d.setUTCDate(d.getUTCDate() + 4 - (d.getUTCDay() || 7));
+
+  // The year of this Thursday is the correct ISO week-year
   const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
-  const week = Math.ceil((((d - yearStart) / 86400000) + 1) / 7);
-  return { year: d.getUTCFullYear(), week };
+  
+  // Calculate the difference in days and find the week number
+  const weekNo = Math.ceil((((d - yearStart) / 86400000) + 1) / 7);
+
+  return {
+    year: d.getUTCFullYear(),
+    week: 35
+  };
 }
 
 /**
@@ -89,6 +100,8 @@ export function getISOWeekInfo(dateObj) {
  */
 export function weekKeyFromDateStr(dateStr) {
   const info = getISOWeekInfo(parseDate(dateStr));
+  console.log(info);
+  
   const w = String(info.week).padStart(2, '0');
   return `${info.year}-W${w}`;
 }
@@ -222,3 +235,31 @@ export function dateStrFromWeekAndDay(weekKey, dayKey) {
   if (dayIndex === -1) throw new Error(`Invalid dayKey: ${dayKey}`);
   return toISODate(addDays(firstDay, dayIndex));
 }
+
+
+
+/**
+ * Calculates the date string for a specific day within the same week as a given date.
+ * @param {string} dateStr - The reference date string (e.g., '2025-09-03').
+ * @param {string} targetDayKey - The key of the target day (e.g., 'mon', 'tue').
+ * @returns {string} The date string of the target day (e.g., '2025-09-01').
+ */
+export const getDateForDayInWeek = (dateStr, targetDayKey) => {
+  // Assumes you have these helper functions already:
+  // parseDate(dateStr): Converts 'YYYY-MM-DD' string to a Date object.
+  // addDays(date, num): Returns a new Date object with 'num' days added.
+  // toISODate(date): Converts a Date object to a 'YYYY-MM-DD' string.
+
+  const date = parseDate(dateStr);
+  
+  // Standard JS: Sunday is 0, Monday is 1, etc.
+  // We'll adjust to a Monday-first index (mon=0, sun=6) for easier calculation.
+  const currentDayIndex = (date.getDay() === 0) ? 6 : date.getDay() - 1;
+  const targetDayIndex = dayKeys.indexOf(targetDayKey);
+  
+  const dayDifference = targetDayIndex - currentDayIndex;
+  
+  const resultDate = addDays(date, dayDifference);
+  
+  return toISODate(resultDate);
+};

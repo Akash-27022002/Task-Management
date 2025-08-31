@@ -1,8 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import  { useState, useEffect } from 'react';
 import Sidebar from './components/Sidebar.jsx';
 import Header from './components/Header.jsx';
 import TodayView from './components/views/TodayView.jsx';
-import PlannerView from './components/views/PlannerView.jsx';
+import PlannerView from './components/views/Planner/PlannerView.jsx';
 import RevisionsView from './components/views/RevisionsView.jsx';
 import BacklogView from './components/views/BacklogView.jsx';
 import AddPanel from './components/AddPanel.jsx';
