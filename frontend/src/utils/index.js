@@ -263,3 +263,33 @@ export const getDateForDayInWeek = (dateStr, targetDayKey) => {
   
   return toISODate(resultDate);
 };
+
+
+/**
+ * Checks if a given time block overlaps with any block in an existing array.
+ * @param {{id: string, start: string, end: string}} newBlock - The new block to check.
+ * @param {Array<{id: string, start: string, end: string}>} existingBlocks - The array of blocks to check against.
+ * @returns {boolean} - True if there is an overlap, false otherwise.
+ */
+export const hasTimeOverlap = (newBlock, existingBlocks) => {
+  const newStart = t2min(newBlock.start); // Assumes you have a t2min utility
+  const newEnd = t2min(newBlock.end);
+
+  // Check against every existing block, excluding itself if it's an update
+  for (const existingBlock of existingBlocks) {
+    // If we are updating a block, don't compare it against its old self
+    if (newBlock.id && newBlock.id === existingBlock.id) {
+      continue;
+    }
+    
+    const existingStart = t2min(existingBlock.start);
+    const existingEnd = t2min(existingBlock.end);
+
+    // The overlap condition
+    if (newStart < existingEnd && newEnd > existingStart) {
+      return true; // Found an overlap
+    }
+  }
+
+  return false; // No overlaps found
+};

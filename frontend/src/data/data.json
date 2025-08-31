@@ -1,0 +1,54 @@
+{
+  "123456": {
+    "templateLibrary": [
+      {
+        "id": "lib_template_1725081480000",
+        "name": "University Semester (Sample)",
+        "type": "Individual Days",
+        "status": "published",
+        "schedule": {
+          "mon": [
+            { "id": "block_m1", "start": "09:00", "end": "10:30", "label": "Calculus II" }
+          ],
+          "tue": [
+            { "id": "block_t1", "start": "11:00", "end": "12:30", "label": "Data Structures Lab" }
+          ],
+          "wed": [],
+          "thu": [
+            { "id": "block_th1", "start": "11:00", "end": "12:30", "label": "Data Structures Lab" }
+          ],
+          "fri": [
+            { "id": "block_f1", "start": "09:00", "end": "10:30", "label": "Calculus II" }
+          ],
+          "sat": [],
+          "sun": []
+        },
+        "common": {
+          "mon": [{ "id": "common_m1", "start": "12:30", "end": "13:30", "label": "Lunch Break" }],
+          "tue": [{ "id": "common_t1", "start": "12:30", "end": "13:30", "label": "Lunch Break" }],
+          "wed": [{ "id": "common_w1", "start": "12:00", "end": "13:00", "label": "Lunch Break" }],
+          "thu": [{ "id": "common_th1", "start": "12:30", "end": "13:30", "label": "Lunch Break" }],
+          "fri": [{ "id": "common_f1", "start": "12:30", "end": "13:30", "label": "Lunch Break" }],
+          "sat": [],
+          "sun": []
+        }
+      }
+    ],
+    "scheduledTemplates": [
+      {
+        "id": "sched_instance_1725081540000",
+        "templateId": "lib_template_1725081480000",
+        "dateRange": {
+          "start": "2025-08-01",
+          "end": "2025-12-20"
+        }
+      }
+    ],
+    "dailyNotes": {
+      "2025-09-09_block_t1": {
+        "note": "Quiz today on Big O notation!"
+      }
+    },
+    "tasks": []
+  }
+}

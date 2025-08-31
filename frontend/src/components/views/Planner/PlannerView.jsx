@@ -1,101 +1,127 @@
-// src/components/Planner/PlannerView.jsx
-
-import { useState } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import PropTypes from 'prop-types';
 import * as utils from '../../../utils';
+import { fetchUserData, saveUserData } from '../../../api/userData';
 
 import PlannerHeader from './PlannerHeader';
 import ViewToggle from './ViewToggle';
 import TasksView from './TasksView';
 import TimetableView from './TimetableView';
+import TemplateEditorModal from './TemplateEditorModal';
 
-const PlannerView = ({ tasks, selectedDate, handleDateChange, timetable, setTimetable, setTasks, onEditTask, onToggleDone, commonBlocks, setCommonBlocks }) => {
+const PlannerView = ({ userId = "123456" }) => {
+  // --- STATE MANAGEMENT ---
+  const [isLoading, setIsLoading] = useState(true); // 1. Add loading state
+  const [tasks, setTasks] = useState([]);
+  const [templateLibrary, setTemplateLibrary] = useState([]);
+  const [scheduledTemplates, setScheduledTemplates] = useState([]);
+  const [dailyNotes, setDailyNotes] = useState({});
+  
+  const [selectedDate, setSelectedDate] = useState(utils.todayStr());
   const [viewMode, setViewMode] = useState("tasks");
+  const [isTemplateModalOpen, setTemplateModalOpen] = useState(false);
 
-  // --- DATA DERIVATION ---
-  const plannerTasks = tasks
-    .filter((t) => utils.isSameDay(t.date, selectedDate))
-    .sort((a, b) => a.time?.localeCompare(b.time || '') || 0);
+  // --- DATA PERSISTENCE ---
+  useEffect(() => {
+    fetchUserData(userId).then(data => {
+      if (data) {
+        setTasks(data.tasks || []);
+        setTemplateLibrary(data.templateLibrary || []);
+        setScheduledTemplates(data.scheduledTemplates || []);
+        setDailyNotes(data.dailyNotes || {});
+      }
+      setIsLoading(false); // 2. Set loading to false after data is fetched
+    });
+  }, [userId]);
 
-  const upcomingTasks = tasks
-    .filter((t) => {
-      const td = utils.parseDate(t.date);
-      return td > utils.parseDate(selectedDate) && td <= utils.addDays(utils.parseDate(selectedDate), 7);
-    })
-    .sort((a, b) => a.date.localeCompare(b.date) || (a.time || '').localeCompare(b.time || ''));
-
-  // --- CORE LOGIC & HANDLERS ---
-  const getCombinedDayBlocks = (dateStr) => {
-    console.log("Getting combined blocks for date:", dateStr);
-    const dayKey = utils.dayKeyFromDateStr(dateStr);
-    const weekKey = utils.weekKeyFromDateStr(dateStr);
-    const daySpecificBlocks = dayKey ? (timetable[weekKey]?.[dayKey] || []) : [];
-    console.log("Day Specific Blocks:", daySpecificBlocks,timetable[weekKey], dayKey,weekKey); 
-     const commonBlocksForDay = commonBlocks.filter(b => b.days.includes(dayKey) && new Date(dateStr) >= utils.parseDate(b.dateRange.start) && new Date(dateStr) <= utils.parseDate(b.dateRange.end));
-      // console.log("Common Blocks for Day:", commonBlocksForDay);
-     const allBlocks = [...daySpecificBlocks, ...commonBlocksForDay.map(b => ({ start: b.start, end: b.end, label: b.label }))];
-    // console.log("All Blocks:", allBlocks);
-    return utils.normalizeBlocks(allBlocks);
-  };
-
-  const handleAddTask = (newTaskData) => {
-    if (newTaskData.time && utils.timeFallsInBlocks(newTaskData.time, getCombinedDayBlocks(selectedDate))) {
-      alert('Error: This task clashes with a busy window. Please choose another time.');
-      return;
+  useEffect(() => {
+    // 3. Prevent saving on initial load before data is ready
+    if (!isLoading) {
+      const dataToSave = { tasks, templateLibrary, scheduledTemplates, dailyNotes };
+      saveUserData(userId, dataToSave);
     }
-    const newTask = {
-      id: utils.uid(),
-      ...newTaskData,
-      date: selectedDate,
-      notes: '',
-      createdAt: utils.todayStr(),
-      done: false,
-      revisable: newTaskData.type === 'coding',
-      revisionStage: 0,
-      links: [],
-    };
-    setTasks((prev) => [...prev, newTask]);
+  }, [tasks, templateLibrary, scheduledTemplates, dailyNotes, userId, isLoading]); // Add isLoading to dependencies
+
+  // --- NEW CORE LOGIC ---
+  const getDaySchedule = useCallback((dateStr) => {
+    const activeInstance = scheduledTemplates.find(inst =>
+      dateStr >= inst.dateRange.start && dateStr <= inst.dateRange.end
+    );
+    if (!activeInstance) return [];
+
+    const template = templateLibrary.find(t => t.id === activeInstance.templateId);
+    if (!template) return [];
+
+    const dayKey = utils.dayKeyFromDateStr(dateStr);
+    const scheduleBlocks = template.schedule?.[dayKey] || [];
+    const commonBlocks = template.common?.[dayKey] || [];
+    
+    const allBlocks = [...scheduleBlocks, ...commonBlocks].map(block => {
+        const noteKey = `${dateStr}_${block.id}`;
+        const specificNote = dailyNotes[noteKey]?.note || '';
+        return { ...block, note: specificNote };
+    });
+
+    return utils.normalizeBlocks(allBlocks);
+  }, [templateLibrary, scheduledTemplates, dailyNotes]);
+
+  // --- HANDLERS ---
+  const handleSaveTemplate = (templateToSave) => {
+     setTemplateLibrary(prev => {
+        const exists = prev.some(t => t.id === templateToSave.id);
+        if (exists) {
+            return prev.map(t => t.id === templateToSave.id ? templateToSave : t);
+        }
+        return [...prev, templateToSave];
+     });
   };
+
+  const handleDeleteTemplate = (templateIdToDelete) => {
+    const isTemplateInUse = scheduledTemplates.some(inst => inst.templateId === templateIdToDelete);
+    if (isTemplateInUse) {
+      const confirmDelete = window.confirm(
+        'WARNING: This template is in use. Deleting it will also remove it from your schedule. Are you sure?'
+      );
+      if (!confirmDelete) return;
+    }
+    setTemplateLibrary(prev => prev.filter(t => t.id !== templateIdToDelete));
+    setScheduledTemplates(prev => prev.filter(inst => inst.templateId !== templateIdToDelete));
+    alert('Template deleted.');
+  };
+  
+  // ... (existing task handlers would go here)
 
   return (
     <div className="space-y-6">
-      <PlannerHeader selectedDate={selectedDate} handleDateChange={handleDateChange} />
+      <TemplateEditorModal 
+          isOpen={isTemplateModalOpen}
+          onClose={() => setTemplateModalOpen(false)}
+          templates={templateLibrary}
+          onSave={handleSaveTemplate}
+          onDelete={handleDeleteTemplate}
+      />
+      <PlannerHeader selectedDate={selectedDate} handleDateChange={(e) => setSelectedDate(e.target.value)} />
       <ViewToggle viewMode={viewMode} setViewMode={setViewMode} />
 
       {viewMode === 'tasks' ? (
-        <TasksView
-          plannerTasks={plannerTasks}
-          upcomingTasks={upcomingTasks}
-          onAddTask={handleAddTask}
-          onToggleDone={onToggleDone}
-          onEditTask={onEditTask}
-        />
+        <TasksView plannerTasks={[]} upcomingTasks={[]} onAddTask={() => {}} onToggleDone={() => {}} onEditTask={() => {}} />
       ) : (
         <TimetableView
           selectedDate={selectedDate}
-          timetable={timetable}
-          setTimetable={setTimetable}
-          commonBlocks={commonBlocks}
-          setCommonBlocks={setCommonBlocks}
-          getCombinedDayBlocks={getCombinedDayBlocks}
+          getDaySchedule={getDaySchedule}
+          templateLibrary={templateLibrary}
+          scheduledTemplates={scheduledTemplates}
+          setScheduledTemplates={setScheduledTemplates}
+          onOpenTemplateManager={() => setTemplateModalOpen(true)}
         />
       )}
     </div>
   );
 };
 
- PlannerView.propTypes = {
-  tasks: PropTypes.array.isRequired,
-  selectedDate: PropTypes.string.isRequired,
-  handleDateChange: PropTypes.func.isRequired,
-  timetable: PropTypes.object.isRequired,
-  setTimetable: PropTypes.func.isRequired,
-  setTasks: PropTypes.func.isRequired,
-  onEditTask: PropTypes.func.isRequired,
-  onToggleDone: PropTypes.func.isRequired,
-  commonBlocks: PropTypes.array.isRequired,
-  setCommonBlocks: PropTypes.func.isRequired,
-  getDayBlocks: PropTypes.func.isRequired,
+PlannerView.propTypes = {
+  userId: PropTypes.string,
 };
 
 export default PlannerView;
+
